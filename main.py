@@ -69,11 +69,14 @@ def createPano(name):
     # 403 test1
     # 630 test2
     # 594 test3
-    while i < 594:
-        imgs.append(cv2.imread(name + '/' + name + str(i) + ".jpg"))
+    base = 1
+    while base+i < 630:
+        imgs.append(cv2.imread(name + '/' + name + '0'*(4-len(str(base+i))) + str(base+i) + ".jpg"))
         # cv2.imshow(str(i), imgs[i])
-        print(i)
-        i = i + 10
+        i = i + 1
+        if i == 10:
+            base += 70
+            i = 0
 
     stitchy = cv2.Stitcher.create()
     (dummy, output) = stitchy.stitch(imgs)
@@ -445,11 +448,11 @@ def colorThenDetect(name):
         20,
         videoSize)
     # the output will be written to output.avi
-    outResult = cv2.VideoWriter(
-        'final_result_' + name + '.mp4',
-        cv2.VideoWriter_fourcc(*'mp4v'),
-        20,
-        videoSize)
+    # outResult = cv2.VideoWriter(
+    #     'final_result_' + name + '.mp4',
+    #     cv2.VideoWriter_fourcc(*'mp4v'),
+    #     20,
+    #     videoSize)
     avgSizeOfBox = 0
     prevXA = 0
     frameCount = 1
@@ -458,6 +461,7 @@ def colorThenDetect(name):
     if not os.path.exists('final_colored_cropped_' + name):
         os.makedirs('final_colored_cropped_' + name)
     while 1:
+        print(frameCount)
         frameCount += 1
         ret, frame2 = cap.read()
         if not ret:
@@ -482,7 +486,7 @@ def colorThenDetect(name):
 
         if boxes.size == 0:
             continue
-        print(boxes)
+        # print(boxes)
         # https://stackoverflow.com/questions/15341538/numpy-opencv-2-how-do-i-crop-non-rectangular-region
         skip = False
         for (xA, yA, xB, yB) in boxes:
@@ -510,50 +514,49 @@ def colorThenDetect(name):
             continue
 
         # display the detected boxes in the colour picture
-        frameCopy = frame2
-        sum1, sum2, sum3 = 0, 0, 0
-        count = 0
-        points = []
+        # frameCopy = frame2
+        # sum1, sum2, sum3 = 0, 0, 0
+        # count = 0
+        # points = []
         for i in range(0, videoSize[1]):
             for j in range(0, videoSize[0]):
                 if not (xA < j < xB and yA < i < yB):
                     frame2[i, j] = (255, 255, 255)
-                    frameCopy[i, j] = (255, 255, 255)
+                    # frameCopy[i, j] = (255, 255, 255)
                     bgr[i, j] = (255, 255, 255)
                 # elif not ((bgr[i][j][0] < 10 and bgr[i][j][1] < 10) or (bgr[i][j][2] < 10 and bgr[i][j][1] > 60 and bgr[i][j][0] > 60) or (bgr[i][j][1] < 30 and 40 < bgr[i][j][2] < 70)):
                 #     frameCopy[i, j] = (255, 255, 255)
-                else:
-                    points.append((i, j, bgr[i][j]))
-                    sum1 += bgr[i][j][0]
-                    sum2 += bgr[i][j][1]
-                    sum3 += bgr[i][j][2]
-                    count += 1
-        sum1 /= count
-        sum2 /= count
-        sum3 /= count
+                # else:
+                #     points.append((i, j, bgr[i][j]))
+                #     sum1 += bgr[i][j][0]
+                #     sum2 += bgr[i][j][1]
+                #     sum3 += bgr[i][j][2]
+                #     count += 1
+        # sum1 /= count
+        # sum2 /= count
+        # sum3 /= count
         # print(sum1, sum2, sum3)
-        points = sorted(points, key=lambda x: abs(x[2][0] - sum1) + abs(x[2][1] - sum2) + abs(x[2][2] - sum3))
+        # points = sorted(points, key=lambda x: abs(x[2][0] - sum1) + abs(x[2][1] - sum2) + abs(x[2][2] - sum3))
         # print(points)
-        for point in points[0:round(len(points)*0.5)]:
-            frameCopy[point[0]][point[1]] = (255, 255, 255)
-        cv2.imshow('frame2', frameCopy)
-        k = cv2.waitKey(10) & 0xff
+        # for point in points[0:round(len(points)*0.5)]:
+        #     frame2[point[0]][point[1]] = (255, 255, 255)
+        # cv2.imshow('frame2', frameCopy)
+        # k = cv2.waitKey(10) & 0xff
         # Write the output video
-        # cv2.imwrite('final_colored_cropped_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(
-        #     frameCount) + '.jpg',
-        #             bgr)
-        # cv2.imwrite('final_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg', frame2)
-        # outCroppedOriginal.write(frame2.astype('uint8'))
+        cv2.imwrite('final_colored_cropped_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(
+            frameCount) + '.jpg',
+                    bgr)
+        cv2.imwrite('final_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg', frame2)
         # cv2.imwrite('final_temp_result' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg', frame2)
-        # outCroppedOriginal.write(frame2.astype('uint8'))
-        # outCroppedColored.write(bgr.astype('uint8'))
-        outResult.write(frameCopy.astype('uint8'))
+        outCroppedOriginal.write(frame2.astype('uint8'))
+        outCroppedColored.write(bgr.astype('uint8'))
+        # outResult.write(frameCopy.astype('uint8'))
 
     # When everything done, release the capture
     cap.release()
     # and release the output
     outCroppedColored.release()
-    outResult.release()
+    # outResult.release()
     outColored.release()
     outCroppedOriginal.release()
     # finally, close the window
@@ -654,8 +657,8 @@ def main():
     # runFrontRemovalBasedOnMotionVector('test1')
     # runFrontRemovalBasedOnMotionVector('test2')
     # runFrontRemovalBasedOnMotionVector('test3')
-    colorThenDetect('test2')
-
+    # colorThenDetect('test2')
+    colorThenDetect('test3')
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
