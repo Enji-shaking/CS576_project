@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import os
 import glob
+import shutil
 # from imageai.Detection import ObjectDetection
 from skimage import data, filters
 
@@ -431,28 +432,33 @@ def colorThenDetect(name):
     hsv = np.zeros_like(frame1)
     hsv[..., 1] = 255
 
-    outColored = cv2.VideoWriter(
-        'final_colored_' + name + '.mp4',
-        cv2.VideoWriter_fourcc(*'mp4v'),
-        20,
-        videoSize)
-    # the output will be written to output.avi
-    outCroppedColored = cv2.VideoWriter(
-        'final_cropped_colored_' + name + '.mp4',
-        cv2.VideoWriter_fourcc(*'mp4v'),
-        20,
-        videoSize)
-    outCroppedOriginal = cv2.VideoWriter(
-        'final_cropped_original_' + name + '.mp4',
-        cv2.VideoWriter_fourcc(*'mp4v'),
-        20,
-        videoSize)
-    # the output will be written to output.avi
+    # outColored = cv2.VideoWriter(
+    #     'final_colored_' + name + '.mp4',
+    #     cv2.VideoWriter_fourcc(*'mp4v'),
+    #     20,
+    #     videoSize)
+    # # the output will be written to output.avi
+    # outCroppedColored = cv2.VideoWriter(
+    #     'final_cropped_colored_' + name + '.mp4',
+    #     cv2.VideoWriter_fourcc(*'mp4v'),
+    #     20,
+    #     videoSize)
+    # outCroppedOriginal = cv2.VideoWriter(
+    #     'final_cropped_original_' + name + '.mp4',
+    #     cv2.VideoWriter_fourcc(*'mp4v'),
+    #     20,
+    #     videoSize)
+    # # the output will be written to output.avi
     # outResult = cv2.VideoWriter(
     #     'final_result_' + name + '.mp4',
     #     cv2.VideoWriter_fourcc(*'mp4v'),
     #     20,
     #     videoSize)
+    outRGB = cv2.VideoWriter(
+        'final_filtered_' + name + '.mp4',
+        cv2.VideoWriter_fourcc(*'mp4v'),
+        20,
+        videoSize)
     avgSizeOfBox = 0
     prevXA = 0
     frameCount = 1
@@ -475,7 +481,7 @@ def colorThenDetect(name):
         hsv[..., 0] = ang * 180 / np.pi / 2
         hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
         bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        outColored.write(bgr.astype('uint8'))
+        # outColored.write(bgr.astype('uint8'))
 
         prvs = next
         # detect
@@ -486,7 +492,7 @@ def colorThenDetect(name):
 
         if boxes.size == 0:
             continue
-        # print(boxes)
+        print(boxes)
         # https://stackoverflow.com/questions/15341538/numpy-opencv-2-how-do-i-crop-non-rectangular-region
         skip = False
         for (xA, yA, xB, yB) in boxes:
@@ -494,8 +500,8 @@ def colorThenDetect(name):
                 avgSizeOfBox = (xB - xA) * (yB - yA)
             else:
                 currSize = (xB - xA) * (yB - yA)
-                if (abs(currSize - avgSizeOfBox) / avgSizeOfBox < 1.5 or (abs(
-                        currSize - avgSizeOfBox) / avgSizeOfBox < 4 and frameCount > 400)) and not currSize < 5000 and not yA > 250:
+                if (abs(currSize - avgSizeOfBox) / avgSizeOfBox < 2.5 or (abs(
+                        currSize - avgSizeOfBox) / avgSizeOfBox < 4 and frameCount > 400)) and not currSize < 5000 and not yA > 310:
                     avgSizeOfBox = 0.7 * avgSizeOfBox + 0.3 * currSize
                 else:
                     print("skipped", avgSizeOfBox, currSize)
@@ -504,7 +510,7 @@ def colorThenDetect(name):
             if prevXA == 0:
                 prevXA = xA
             else:
-                if abs(xA - prevXA) < 50:
+                if abs(xA - prevXA) < 70:
                     prevXA = 0.7 * prevXA + 0.3 * xA
                 else:
                     print("skipped xA", prevXA)
@@ -514,7 +520,6 @@ def colorThenDetect(name):
             continue
 
         # display the detected boxes in the colour picture
-        # frameCopy = frame2
         # sum1, sum2, sum3 = 0, 0, 0
         # count = 0
         # points = []
@@ -522,43 +527,48 @@ def colorThenDetect(name):
             for j in range(0, videoSize[0]):
                 if not (xA < j < xB and yA < i < yB):
                     frame2[i, j] = (255, 255, 255)
-                    # frameCopy[i, j] = (255, 255, 255)
-                    bgr[i, j] = (255, 255, 255)
+                    # bgr[i, j] = (255, 255, 255)
                 # elif not ((bgr[i][j][0] < 10 and bgr[i][j][1] < 10) or (bgr[i][j][2] < 10 and bgr[i][j][1] > 60 and bgr[i][j][0] > 60) or (bgr[i][j][1] < 30 and 40 < bgr[i][j][2] < 70)):
                 #     frameCopy[i, j] = (255, 255, 255)
-                # else:
-                #     points.append((i, j, bgr[i][j]))
-                #     sum1 += bgr[i][j][0]
-                #     sum2 += bgr[i][j][1]
-                #     sum3 += bgr[i][j][2]
-                #     count += 1
+                elif (not (bgr[i][j][0] < 100 or bgr[i][j][1] < 100)) or (bgr[i][j][2] > 100):
+                    frame2[i, j] = (255, 255, 255)
+        #             points.append((i, j, bgr[i][j]))
+        #             sum1 += bgr[i][j][0]
+        #             sum2 += bgr[i][j][1]
+        #             sum3 += bgr[i][j][2]
+        #             count += 1
         # sum1 /= count
         # sum2 /= count
         # sum3 /= count
         # print(sum1, sum2, sum3)
         # points = sorted(points, key=lambda x: abs(x[2][0] - sum1) + abs(x[2][1] - sum2) + abs(x[2][2] - sum3))
-        # print(points)
+        # outCroppedOriginal.write(frame2.astype('uint8'))
+        # cv2.imwrite('final_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg',
+        #             frame2)
+        #
         # for point in points[0:round(len(points)*0.5)]:
         #     frame2[point[0]][point[1]] = (255, 255, 255)
-        # cv2.imshow('frame2', frameCopy)
-        # k = cv2.waitKey(10) & 0xff
+        cv2.imshow('frame2', frame2)
+        k = cv2.waitKey(10) & 0xff
         # Write the output video
-        cv2.imwrite('final_colored_cropped_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(
-            frameCount) + '.jpg',
-                    bgr)
-        cv2.imwrite('final_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg', frame2)
+        # cv2.imwrite('final_colored_cropped_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(
+        #     frameCount) + '.jpg',
+        #             bgr)
+        # outCroppedColored.write(bgr.astype('uint8'))
+
+        # outResult.write(frame2.astype('uint8'))
         # cv2.imwrite('final_temp_result' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg', frame2)
-        outCroppedOriginal.write(frame2.astype('uint8'))
-        outCroppedColored.write(bgr.astype('uint8'))
-        # outResult.write(frameCopy.astype('uint8'))
+        cv2.imwrite('final_filtered_cropped_' + name + '/' + 'fore' + '0' * (4 - len(str(frameCount))) + str(frameCount) + '.jpg', frame2)
+        outRGB.write(frame2)
 
     # When everything done, release the capture
     cap.release()
     # and release the output
-    outCroppedColored.release()
+    # outCroppedColored.release()
     # outResult.release()
-    outColored.release()
-    outCroppedOriginal.release()
+    # outColored.release()
+    # outCroppedOriginal.release()
+    outRGB.release()
     # finally, close the window
     cv2.destroyAllWindows()
     cv2.waitKey(1)
@@ -591,7 +601,7 @@ def runFrontRemovalBasedOnMotionVector(name):
     hsv[..., 1] = 255
 
     out = cv2.VideoWriter(
-        'filtered_' + name + '.mp4',
+        'new_filtered_' + name + '.mp4',
         cv2.VideoWriter_fourcc(*'mp4v'),
         20,
         videoSize)
@@ -617,11 +627,11 @@ def runFrontRemovalBasedOnMotionVector(name):
                 # for walking
                 # if not (bgr[i][j][0] < 10) or (bgr[i][j][0] < 5 and bgr[i][j][1] < 5 and bgr[i][j][2] < 5):
                 # for test 1
-                # if (not (bgr[i][j][0] < 100 or bgr[i][j][1] < 100)) or (bgr[i][j][2] > 100):
+                if (not (bgr[i][j][0] < 100 or bgr[i][j][1] < 100)) or (bgr[i][j][2] > 100):
                 # for test 2
                 # if not ((bgr[i][j][0] < 10 and bgr[i][j][1] < 10) or (bgr[i][j][2] < 10 and bgr[i][j][1] > 60 and bgr[i][j][0] > 60) or (bgr[i][j][1] < 30 and 40 < bgr[i][j][2] < 70) ):
                 # test 3
-                if not ((bgr[i][j][0] < 10 and bgr[i][j][1] < 10 and bgr[i][j][1] < 10) or (bgr[i][j][1] > 80)):
+                # if not ((bgr[i][j][0] < 10 and bgr[i][j][1] < 10 and bgr[i][j][1] < 10) or (bgr[i][j][1] > 80)):
                     frame2[i][j][0] = 255
                     frame2[i][j][1] = 255
                     frame2[i][j][2] = 255
@@ -641,16 +651,36 @@ def runFrontRemovalBasedOnMotionVector(name):
     extractFrames('colored' + name)
 
 
-def combiningTwo(name):
-    # # 1. color video
-    # generatedColoredVideo = calculateMotionVector2(name)
-    # # 2. centralize the video
-    # generatedHumanVideoName = objectDetection2(generatedColoredVideo)
-    objectDetectionWithSideRemoval(name)
-
-
 def runTestData():
     createPano('walking')
+
+
+def fillUp(dirName):
+    i = 1
+    prev = "fore0001.jpg"
+    while i < 405:
+        filename = dirName + '/fore' + '0'*(4-len(str(i))) + str(i) + '.jpg'
+        print(filename)
+        i+=1
+        if os.path.exists(filename):
+            prev = filename
+            continue
+        else:
+            shutil.copy(prev, filename)
+
+
+def create_video(name):
+    size = (640, 480)
+    out = cv2.VideoWriter(
+        'testing__' + '.mp4',
+        cv2.VideoWriter_fourcc(*'mp4v'),
+        20,
+        size)
+    for filename in glob.glob(name+'/*.jpg'):
+        img = cv2.imread(filename)
+        out.write(img)
+
+    out.release()
 
 
 def main():
@@ -658,7 +688,7 @@ def main():
     # runFrontRemovalBasedOnMotionVector('test2')
     # runFrontRemovalBasedOnMotionVector('test3')
     # colorThenDetect('test2')
-    colorThenDetect('test3')
+    colorThenDetect('test1')
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
